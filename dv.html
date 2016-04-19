@@ -1,0 +1,192 @@
+<style>
+    td {
+        border: 1px solid black;
+        text-align: center;
+    }
+</style>
+<div id="before">
+    <h2>Running benchmark. Please allow up to 30 seconds...</h2>
+</div>
+<div id="results" style="display: none">
+<h2>Summary</h2>
+<table>
+    <tr>
+        <th></th>
+        <th>Mean</th>
+        <th>STDEV</th>
+        <th>Margin of Error</th>
+        <th>Relative Margin of Error</th>
+        <th>Standard Error</th>
+        <th>Variance</th>
+    </tr>
+    <tr>
+        <td>Michael</td>
+        <td id="michael-mean"></td>
+        <td id="michael-deviation"></td>
+        <td id="michael-moe"></td>
+        <td id="michael-rme"></td>
+        <td id="michael-sem"></td>
+        <td id="michael-variance"></td>
+    </tr>
+    <tr>
+        <td>Sorting</td>
+        <td id="sorting-mean"></td>
+        <td id="sorting-deviation"></td>
+        <td id="sorting-moe"></td>
+        <td id="sorting-rme"></td>
+        <td id="sorting-sem"></td>
+        <td id="sorting-variance"></td>
+    </tr>
+    <tr>
+        <td>Hash</td>
+        <td id="hash-mean"></td>
+        <td id="hash-deviation"></td>
+        <td id="hash-moe"></td>
+        <td id="hash-rme"></td>
+        <td id="hash-sem"></td>
+        <td id="hash-variance"></td>
+    </tr>
+</table>
+<h2>On average, the <span id="winner-name"></span> method was roughly <span id="winner-percentage"></span> faster than the <span id="second-name"></span> method, which was roughly <span id="second-percentage"></span> faster than the <span id="last-name"></span> method.</h2>
+<h4>Raw Values Available in Console</h4>
+</div>
+<script src="https://cdn.jsdelivr.net/lodash/4.11.1/lodash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/benchmark/2.1.0/benchmark.min.js"></script>
+<script>
+    var test = new Benchmark.Suite,
+            str1 = "Loremipsumdolorsitamet,consectetueradipiscingelit.Aeneancommodoligulaegetdolor.Aeneanmassa.Cumsociisnatoquepenatibusetmagnisdisparturientmontes,nasceturridiculusmus.Donecqu",
+            str2 = "ondodedemtsicemtDasnalleoutL.dosd.gupotlqaesessrserngunuucoAemiimeAsrdnsairccepar.seruoeuprmtmiemaliismamiclgiebeiaitu,qcunereoatoittoinsaCstp.nuausiotgonenconliucsatnen,tm";
+
+    test
+            .add("Michael", function() {
+
+
+                var locations = {};
+
+                for (var i = 0; i < str1.length; i++) {
+                    var start = locations[str1[i]] || -1;
+                    var location = str2.indexOf(str1[i], start + 1);
+                    if (location === -1) {
+                        return false;
+                    } else {
+                        locations[str1[i]] = location;
+                    }
+                }
+                return true;
+
+    })
+            .add("Sorting", function() {
+                var one = str1.split("").sort().toString(),
+                        two = str2.split("").sort().toString();
+
+                return one === two;
+
+
+            })
+            .add("Hash", function() {
+
+                var count = {}
+
+                for (var i = 0; i < str1.length; i++) {
+                    if (typeof count[str1[i]] !== "undefined") {
+                        count[str1[i]] += 1
+                    } else {
+                        count[str1[i]] = 1;
+                    }
+                }
+                for (var x = 0; x < str2.length; x++) {
+                    count[str2[x]] -= 1;
+                }
+                for (var y = 0; y < str1.length; y++) {
+                    if (count[str1[y]] !== 0) {
+                        return false;
+                    }
+                }
+                return true;
+            })
+            .on('complete', function() {
+                createTable(this);
+            })
+            .run();
+
+    function Michael(str1, str2) {
+
+        var locations = {};
+
+        for (var i = 0; i < str1.length; i++) {
+            var start = locations[str1[i]] || -1;
+            var location = str2.indexOf(str1[i], start + 1);
+            if (location === -1) {
+                return false;
+            } else {
+                locations[str1[i]] = location;
+            }
+        }
+        return true;
+    }
+
+    function Sorting(str1, str2) {
+        str1 = str1.split("").sort().toString(),
+                str2 = str2.split("").sort().toString();
+
+        return str1 === str2;
+    }
+
+    function Hash(str1, str2) {
+
+        var count = {}
+
+        for (var i = 0; i < str1.length; i++) {
+            if (typeof count[str1[i]] !== "undefined") {
+                count[str1[i]] += 1
+            } else {
+                count[str1[i]] = 1;
+            }
+        }
+        for (var x = 0; x < str2.length; x++) {
+            count[str2[x]] -= 1;
+        }
+        for (var y = 0; y < str1.length; y++) {
+            if (count[str1[y]] !== 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function createTable(data) {
+        for (var i = 0; i <= 2; i++) {
+            (function(x) {
+                var keys = Object.keys(data[x].stats);
+                for (var y = 0; y < keys.length; y++) {
+                    if (keys[y] === "sample") {
+                        console.log(data[x].name + " Raw Results:");
+                        console.log(data[x].stats[keys[y]]);
+                        continue;
+                    }
+                    document.getElementById(data[x].name.toLowerCase() + "-" + keys[y]).innerHTML = data[x].stats[keys[y]];
+                }
+            })(i);
+            document.getElementById("results").style.display = "";
+            document.getElementById("before").style.display = "none";
+        }
+        calculateDif(data);
+    }
+
+    function calculateDif(data) {
+        var values = [];
+        for (var i = 0; i <= 2; i++) {
+            values.push({name: data[i].name, mean: data[i].stats.mean});
+        }
+        values = _.sortBy(values, function(m) {
+            return m.mean;
+        });
+        document.getElementById("winner-name").innerHTML = values[0].name;
+        document.getElementById("winner-percentage").innerHTML = ((1 - (values[0].mean / values[1].mean)) * 100).toFixed(2) + "%";
+        document.getElementById("second-name").innerHTML = values[1].name;
+        document.getElementById("second-percentage").innerHTML = ((1 - (values[1].mean / values[2].mean)) * 100).toFixed(2) + "%";
+        document.getElementById("last-name").innerHTML = values[2].name;
+    }
+</script>
+
+
